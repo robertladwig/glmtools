@@ -20,6 +20,7 @@
 #'@param plotting Boolean, if TRUE plots all results as heat maps
 #'@param output Character array of the output folder path 
 #'@param conversion.factor Double of the conversion factor between simulated and observed data, default is 1 for temp.
+#'@param additional.var Character vector of additional valid variable names
 #'@keywords methods
 #'@seealso \code{\link{get_calib_setup}}, \code{\link{get_calib_periods}}, \code{\link{get_calib_init_validation}}
 #'@author
@@ -74,7 +75,8 @@ calibrate_sim <- function(var = 'temp',
                           target.iter = 100,
                           plotting = TRUE,
                           output,
-                          conversion.factor = 1){
+                          conversion.factor = 1,
+                          additional.var = var){
   
   # Development message 
   message('Calibration functions are under development, and are likely to change with future package updates.')
@@ -115,7 +117,7 @@ calibrate_sim <- function(var = 'temp',
   obs <- read_field_obs(field_file, var_name = var)
   calib_GLM(var, ub, lb, init.val, obs, method, glmcmd,
                  metric, target.fit, target.iter, nml_file, glm_file, path, scaling, verbose, pars,
-            conversion.factor)
+            conversion.factor, additional.var)
 
   
   # loads all iterations
@@ -140,7 +142,8 @@ calibrate_sim <- function(var = 'temp',
   temp_rmse1 <- compare_to_field(output, field_file = field_file, 
                                  metric = 'water.temperature', as_value = FALSE, precision= 'hours')
   } else {
-    mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var)
+    mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var,
+                   additional.var = additional.var)
     mod[,3] = mod[,3] * conversion.factor
     temp_rmse1 = get_rmse(mod,obs)
   }
@@ -165,7 +168,8 @@ calibrate_sim <- function(var = 'temp',
     temp_rmse2 <- compare_to_field(output, field_file = field_file, 
                                    metric = 'water.temperature', as_value = FALSE, precision= 'hours')
   } else {
-    mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var)
+    mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var,
+                   additional.var = additional.var)
     mod[,3] = mod[,3] * conversion.factor
     temp_rmse2 = get_rmse(mod,obs)
   }
@@ -191,7 +195,8 @@ calibrate_sim <- function(var = 'temp',
     temp_rmse3 <- compare_to_field(output, field_file = field_file, 
                                    metric = 'water.temperature', as_value = FALSE, precision= 'hours')
   } else {
-    mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var)
+    mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var,
+                   additional.var = additional.var)
     mod[,3] = mod[,3] * conversion.factor
     temp_rmse3 = get_rmse(mod,obs)
   }

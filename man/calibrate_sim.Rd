@@ -22,7 +22,8 @@ calibrate_sim(
   target.iter = 100,
   plotting = TRUE,
   output,
-  conversion.factor = 1
+  conversion.factor = 1,
+  additional.var = var
 )
 }
 \arguments{
@@ -61,6 +62,8 @@ calibrate_sim(
 \item{output}{Character array of the output folder path}
 
 \item{conversion.factor}{Double of the conversion factor between simulated and observed data, default is 1 for temp.}
+
+\item{additional.var}{Character vector of additional valid variable names}
 }
 \description{
 Starts a calibration run with multiple iterations using a GLM-AED2 setup. At the end a output csv.-file of all iterations and a 

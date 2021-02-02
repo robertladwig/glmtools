@@ -4,7 +4,7 @@
 #'@importFrom utils write.csv
 calib_GLM <- function(var, ub, lb, init.val, obs, method, glmcmd,
                       metric, target.fit, target.iter, nml_file, glm_file, path, scaling,
-                      verbose, pars, conversion.factor){
+                      verbose, pars, conversion.factor,additional.var){
 
   if (method == 'CMA-ES'){
     glmOPT <- pureCMAES(par = init.val, fun = glmFUN, lower = rep(0,length(init.val)), 
@@ -15,18 +15,20 @@ calib_GLM <- function(var, ub, lb, init.val, obs, method, glmcmd,
                         glmcmd = glmcmd, nml_file = nml_file, var = var,
                         scaling = scaling, metric = metric, verbose = verbose, 
                         ub = ub, lb = lb, pars = pars, path = path, obs = obs,
-                        conversion.factor = conversion.factor)
+                        conversion.factor = conversion.factor,
+                        additional.var = additional.var)
   } else if (method == 'Nelder-Mead'){
     glmOPT <- neldermeadb(fn = glmFUN, init.val, ub = ub, lb = lb, lower = rep(0,length(init.val)), 
                         upper = rep(10,length(init.val)), 
                         adapt = TRUE,
                         tol = 1e-10,
                         maxfeval = target.iter, glmcmd = glmcmd, nml_file = nml_file, var = var, ub = ub, lb = lb, path = path, obs = obs,
-                        conversion.factor = conversion.factor)
+                        conversion.factor = conversion.factor,
+                        additional.var = additional.var)
     }
   
   glmFUN(p = glmOPT$xmin, nml_file = nml_file, glmcmd = glmcmd, var = var, scaling, metric, verbose, ub = ub, lb = lb, path = path, pars = pars, obs = obs,
-         conversion.factor = conversion.factor)
+         conversion.factor = conversion.factor, additional.var = additional.var)
   
   # glmFUN(glmOPT$xmin, glmcmd, scaling, metric, verbose)
   calib <- read.csv(paste0(path,'/calib_results_',metric,'_',var,'.csv'))
@@ -95,7 +97,8 @@ calib_GLM <- function(var, ub, lb, init.val, obs, method, glmcmd,
   run_glmcmd(glmcmd, path, verbose)
   
   g1 <- diag.plots(
-    mod2obs(paste0(path,'/output/output.nc'), obs, reference = 'surface', var), 
+    mod2obs(paste0(path,'/output/output.nc'), obs, reference = 'surface', var,
+            additional.var = additional.var), 
     obs, ggplot=F)
 
   ggsave(filename = paste0(path,'/diagnostics_',method,'_',var,'.png'), plot = g1, 
@@ -108,7 +111,7 @@ calib_GLM <- function(var, ub, lb, init.val, obs, method, glmcmd,
 #'@param var character
 #'@noRd
 glmFUN <- function(p, glmcmd, nml_file, var, scaling, metric, verbose, ub, lb, pars, path, obs,
-                   conversion.factor){
+                   conversion.factor, additional.var){
   #Catch non-numeric arguments
   if(!is.numeric(p)){
     p = values.optim
@@ -136,7 +139,8 @@ glmFUN <- function(p, glmcmd, nml_file, var, scaling, metric, verbose, ub, lb, p
     error <- try(run_glmcmd(glmcmd, path, verbose))
   }
   
-  mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var)
+  mod <- mod2obs(mod_nc = paste0(path,'/output/output.nc'), obs = obs, reference = 'surface',var = var,
+                 additional.var = additional.var)
   mod[,3] <- mod[,3] * conversion.factor
   fit = get_rmse(mod,obs)
   
@@ -187,16 +191,36 @@ get_rmse <- function(mods, obs){
 #'@param var character
 #'@noRd
 #'@importFrom reshape2 melt
-mod2obs <- function(mod_nc, obs, reference = 'surface', var){
+mod2obs <- function(mod_nc, obs, reference = 'surface', var, additional.var = additional.var){
   deps = unique(obs[,2])
   #tim = unique(obs[,1])
-  mod <- glmtools::get_var(file = mod_nc,var_name = var,reference = reference, z_out = deps)
-  mod <- match.tstep(obs, mod) #From gotm_functions.R
-  mod <- reshape2::melt(mod, id.vars = 1)
-  mod[,2] <- as.character(mod[,2])
-  mod[,2] <- as.numeric(gsub(paste(var,"_",sep=''),'',mod[,2]))
-  colnames(mod) <- c('DateTime', 'Depth', var)
-  mod <- mod[order(mod$DateTime, mod$Depth),]
+  if (length(additional.var) != length(var)){
+    mod <- glmtools::get_var(file = mod_nc,var_name = additional.var[1],reference = reference, z_out = deps)
+    mod <- match.tstep(obs, mod) #From gotm_functions.R
+    mod <- reshape2::melt(mod, id.vars = 1)
+    mod[,2] <- as.character(mod[,2])
+    mod[,2] <- as.numeric(gsub(paste(additional.var[1],"_",sep=''),'',mod[,2]))
+    colnames(mod) <- c('DateTime', 'Depth', additional.var[1])
+    mod <- mod[order(mod$DateTime, mod$Depth),]
+    for (i in 2:length(additional.var)){
+      dummy.mod <- glmtools::get_var(file = dummy.mod_nc,var_name = additional.var[i],reference = reference, z_out = deps)
+      dummy.mod <- match.tstep(obs, dummy.mod) #From gotm_functions.R
+      dummy.mod <- reshape2::melt(dummy.mod, id.vars = 1)
+      dummy.mod[,2] <- as.character(dummy.mod[,2])
+      dummy.mod[,2] <- as.numeric(gsub(paste(additional.var[i],"_",sep=''),'',dummy.mod[,2]))
+      colnames(dummy.mod) <- c('DateTime', 'Depth', additional.var[i])
+      dummy.mod <- dummy.mod[order(dummy.mod$DateTime, dummy.mod$Depth),]
+      mod[,3] <- mod[,3] + dummy.mod[,3]
+    }
+  } else {
+    mod <- glmtools::get_var(file = mod_nc,var_name = var,reference = reference, z_out = deps)
+    mod <- match.tstep(obs, mod) #From gotm_functions.R
+    mod <- reshape2::melt(mod, id.vars = 1)
+    mod[,2] <- as.character(mod[,2])
+    mod[,2] <- as.numeric(gsub(paste(var,"_",sep=''),'',mod[,2]))
+    colnames(mod) <- c('DateTime', 'Depth', var)
+    mod <- mod[order(mod$DateTime, mod$Depth),]
+  }
   if(nrow(mod) != nrow(obs)){
     mod <- merge(obs, mod, by = c(1,2), all.x = T)
     #mod <- merge(obs, mod, by = c(1,2), all = T)
@@ -206,6 +230,28 @@ mod2obs <- function(mod_nc, obs, reference = 'surface', var){
   }
   return(mod)
 }
+#' #'@param var character
+#' #'@noRd
+#' #'@importFrom reshape2 melt
+#' mod2obs <- function(mod_nc, obs, reference = 'surface', var, additional.var = additional.var){
+#'   deps = unique(obs[,2])
+#'   #tim = unique(obs[,1])
+#'   mod <- glmtools::get_var(file = mod_nc,var_name = var,reference = reference, z_out = deps)
+#'   mod <- match.tstep(obs, mod) #From gotm_functions.R
+#'   mod <- reshape2::melt(mod, id.vars = 1)
+#'   mod[,2] <- as.character(mod[,2])
+#'   mod[,2] <- as.numeric(gsub(paste(var,"_",sep=''),'',mod[,2]))
+#'   colnames(mod) <- c('DateTime', 'Depth', var)
+#'   mod <- mod[order(mod$DateTime, mod$Depth),]
+#'   if(nrow(mod) != nrow(obs)){
+#'     mod <- merge(obs, mod, by = c(1,2), all.x = T)
+#'     #mod <- merge(obs, mod, by = c(1,2), all = T)
+#'     mod <- mod[order(mod$DateTime, mod$Depth),]
+#'     mod <- mod[,c(1,2,4)]
+#'     colnames(mod) <- c('DateTime', 'Depth', var)
+#'   }
+#'   return(mod)
+#' }
 
 match.tstep <- function(df1, df2){
   if(df1[1,1] == df1[2,1]){
