@@ -203,7 +203,7 @@ mod2obs <- function(mod_nc, obs, reference = 'surface', var, additional.var = ad
     colnames(mod) <- c('DateTime', 'Depth', additional.var[1])
     mod <- mod[order(mod$DateTime, mod$Depth),]
     for (i in 2:length(additional.var)){
-      dummy.mod <- glmtools::get_var(file = dummy.mod_nc,var_name = additional.var[i],reference = reference, z_out = deps)
+      dummy.mod <- glmtools::get_var(file = mod_nc,var_name = additional.var[i],reference = reference, z_out = deps)
       dummy.mod <- match.tstep(obs, dummy.mod) #From gotm_functions.R
       dummy.mod <- reshape2::melt(dummy.mod, id.vars = 1)
       dummy.mod[,2] <- as.character(dummy.mod[,2])
