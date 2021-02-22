@@ -20,7 +20,7 @@
 #'@param plotting Boolean, if TRUE plots all results as heat maps
 #'@param output Character array of the output folder path 
 #'@param conversion.factor Double of the conversion factor between simulated and observed data, default is 1 for temp.
-#'@param additional.var Character vector of additional valid variable names
+#'@param additional.var Character vector of additional valid variable names, defaults to only one variable
 #'@keywords methods
 #'@seealso \code{\link{get_calib_setup}}, \code{\link{get_calib_periods}}, \code{\link{get_calib_init_validation}}
 #'@author

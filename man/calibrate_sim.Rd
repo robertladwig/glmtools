@@ -63,7 +63,7 @@ calibrate_sim(
 
 \item{conversion.factor}{Double of the conversion factor between simulated and observed data, default is 1 for temp.}
 
-\item{additional.var}{Character vector of additional valid variable names}
+\item{additional.var}{Character vector of additional valid variable names, defaults to only one variable}
 }
 \description{
 Starts a calibration run with multiple iterations using a GLM-AED2 setup. At the end a output csv.-file of all iterations and a 
